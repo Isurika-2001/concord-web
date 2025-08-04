@@ -24,6 +24,9 @@ const getRedisClient = async () => {
     return null;
   }
 
+  console.log('🔍 getRedisClient called');
+  console.log('🔍 NODE_ENV:', process.env.NODE_ENV);
+  
   if (!redisClient) {
     try {
       console.log('🔍 Attempting Redis connection...');
@@ -34,11 +37,22 @@ const getRedisClient = async () => {
         return null;
       }
       
+      console.log('🔍 Creating Redis client...');
       redisClient = createClient({
         url: process.env.REDIS_URL
       });
+      
+      console.log('🔍 Connecting to Redis...');
       await redisClient.connect();
       console.log('✅ Redis client connected');
+      
+      // Test the connection
+      console.log('🔍 Testing Redis connection...');
+      await redisClient.set('test', 'test');
+      await redisClient.get('test');
+      await redisClient.del('test');
+      console.log('✅ Redis connection tested successfully');
+      
     } catch (error) {
       console.error('❌ Redis connection failed:', error);
       console.error('❌ Error details:', {
@@ -46,8 +60,11 @@ const getRedisClient = async () => {
         code: error instanceof Error && 'code' in error ? (error as { code?: string }).code : undefined,
         stack: error instanceof Error ? error.stack : undefined
       });
+      redisClient = null;
       return null;
     }
+  } else {
+    console.log('🔍 Using existing Redis client');
   }
   return redisClient;
 };
