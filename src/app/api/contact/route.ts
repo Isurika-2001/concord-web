@@ -11,7 +11,7 @@ interface Submission {
 }
 
 // Simple in-memory storage as fallback
-let submissionsStorage: Submission[] = [];
+const submissionsStorage: Submission[] = [];
 
 // Dynamic import for Vercel KV (only available in production)
 const getKV = async () => {
@@ -20,7 +20,7 @@ const getKV = async () => {
       const { kv } = await import('@vercel/kv');
       return kv;
     }
-  } catch (error) {
+  } catch {
     console.log('Vercel KV not available, using fallback storage');
   }
   return null;
