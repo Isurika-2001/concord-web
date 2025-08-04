@@ -128,13 +128,14 @@ export async function GET() {
         // Get all submission IDs
         const submissionIds = await redis.lrange('submissions:list', 0, -1);
         
-        if (!submissionIds || submissionIds.length === 0) {
+        if (!submissionIds || (Array.isArray(submissionIds) && submissionIds.length === 0)) {
           return NextResponse.json({ submissions: [] });
         }
 
         // Get all submissions
+        const submissionIdsArray = Array.isArray(submissionIds) ? submissionIds as string[] : [];
         const submissions = await Promise.all(
-          submissionIds.map(async (id: string) => {
+          submissionIdsArray.map(async (id: string) => {
             const data = await redis.get(`submission:${id}`);
             return data ? JSON.parse(data) : null;
           })
@@ -142,8 +143,8 @@ export async function GET() {
         
         // Filter out any null values and sort by timestamp
         const validSubmissions = submissions
-          .filter((submission): submission is Submission => submission !== null)
-          .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+          .filter((submission: any): submission is Submission => submission !== null)
+          .sort((a: Submission, b: Submission) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
         return NextResponse.json({ submissions: validSubmissions });
       } catch (error) {
