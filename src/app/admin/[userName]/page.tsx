@@ -15,6 +15,28 @@ interface Submission {
   timestamp: string;
 }
 
+// Loading skeleton component
+const SubmissionSkeleton = () => (
+  <Card className="animate-pulse">
+    <CardHeader>
+      <div className="flex justify-between items-start">
+        <div className="space-y-2">
+          <div className="h-5 bg-gray-200 rounded w-32"></div>
+          <div className="h-4 bg-gray-200 rounded w-48"></div>
+        </div>
+        <div className="h-3 bg-gray-200 rounded w-24"></div>
+      </div>
+    </CardHeader>
+    <CardContent>
+      <div className="space-y-2">
+        <div className="h-4 bg-gray-200 rounded w-full"></div>
+        <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+        <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+      </div>
+    </CardContent>
+  </Card>
+);
+
 export default function AdminPage() {
   const params = useParams();
   const userName = params.userName as string;
@@ -201,8 +223,30 @@ export default function AdminPage() {
     return (
       <div className="min-h-screen bg-background p-8">
         <div className="max-w-6xl mx-auto">
-          <h1 className="text-3xl font-bold mb-8">Contact Form Submissions</h1>
-          <div className="text-center">Loading...</div>
+          <div className="flex justify-between items-center mb-8">
+            <div>
+              <h1 className="text-3xl font-bold">Contact Form Submissions</h1>
+              <p className="text-sm text-muted-foreground">Logged in as: {userName}</p>
+            </div>
+            <div className="flex items-center space-x-4">
+              <div className="text-sm text-muted-foreground">
+                Loading submissions...
+              </div>
+              <Button 
+                variant="outline" 
+                onClick={handleLogout}
+                className="text-sm"
+              >
+                Logout
+              </Button>
+            </div>
+          </div>
+          
+          <div className="space-y-6">
+            {[1, 2, 3].map((index) => (
+              <SubmissionSkeleton key={index} />
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -231,6 +275,13 @@ export default function AdminPage() {
             <div className="text-sm text-muted-foreground">
               Total: {submissions.length} submissions
             </div>
+            <Button 
+              variant="outline" 
+              onClick={fetchSubmissions}
+              className="text-sm"
+            >
+              Refresh
+            </Button>
             <Button 
               variant="outline" 
               onClick={handleLogout}
