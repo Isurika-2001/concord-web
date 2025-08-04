@@ -20,7 +20,7 @@ const addSubmission = (submission: Submission) => {
 };
 
 // Redis client setup
-let redisClient: any = null;
+let redisClient: ReturnType<typeof createClient> | null = null;
 
 const getRedisClient = async () => {
   if (!redisClient) {
