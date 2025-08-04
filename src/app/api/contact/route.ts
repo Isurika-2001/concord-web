@@ -18,7 +18,7 @@ const getRedisClient = async () => {
   if (!redisClient) {
     try {
       redisClient = createClient({
-        url: process.env.KV_URL || process.env.REDIS_URL
+        url: process.env.REDIS_URL
       });
       await redisClient.connect();
       console.log('✅ Redis client connected');

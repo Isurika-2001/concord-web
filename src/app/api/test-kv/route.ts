@@ -5,7 +5,7 @@ export async function GET() {
   try {
     // Test Redis connection
     const redis = createClient({
-      url: process.env.KV_URL || process.env.REDIS_URL
+      url: process.env.REDIS_URL
     });
     
     await redis.connect();
