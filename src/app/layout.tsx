@@ -18,16 +18,16 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       {
-        url: "/concord-logo-icon.png",
+        url: "/concord-logo-icon.png?v=2",
         type: "image/png",
       },
       {
-        url: "/favicon.ico",
+        url: "/favicon.ico?v=2",
         type: "image/x-icon",
       },
     ],
-    shortcut: "/concord-logo-icon.png",
-    apple: "/concord-logo-icon.png",
+    shortcut: "/concord-logo-icon.png?v=2",
+    apple: "/concord-logo-icon.png?v=2",
   },
 };
 
@@ -38,6 +38,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <link rel="icon" href="/concord-logo-icon.png?v=2" type="image/png" />
+        <link rel="shortcut icon" href="/favicon.ico?v=2" type="image/x-icon" />
+        <link rel="apple-touch-icon" href="/concord-logo-icon.png?v=2" />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
