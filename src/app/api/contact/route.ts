@@ -37,8 +37,16 @@ const getRedisClient = async () => {
       redisClient = createClient({
         url: process.env.REDIS_URL
       });
+      
+      // Test the connection
       await redisClient.connect();
-      console.log('✅ Redis client connected');
+      
+      // Test basic operations
+      await redisClient.set('test', 'test');
+      await redisClient.get('test');
+      await redisClient.del('test');
+      
+      console.log('✅ Redis client connected and tested');
     } catch (error) {
       console.error('❌ Redis connection failed:', error);
       console.error('❌ Error details:', {
@@ -46,6 +54,7 @@ const getRedisClient = async () => {
         code: error instanceof Error && 'code' in error ? (error as { code?: string }).code : undefined,
         stack: error instanceof Error ? error.stack : undefined
       });
+      redisClient = null;
       return null;
     }
   }
@@ -91,22 +100,21 @@ export async function POST(request: NextRequest) {
     try {
       const redis = await getRedisClient();
       
-      if (redis) {
+      if (redis && redis.lpush) {
         // Production: Store in Redis
         await redis.set(`submission:${submission.id}`, JSON.stringify(submission));
         await redis.lpush('submissions:list', submission.id);
         console.log(`✅ Submission stored in Redis! ID: ${submission.id}`);
       } else {
-        // Development: Store in memory
+        // Development or Redis failed: Store in memory
         submissionsStorage.push(submission);
         console.log(`✅ Submission stored in memory! ID: ${submission.id}`);
       }
     } catch (error) {
       console.error('❌ Failed to store submission:', error);
-      return NextResponse.json(
-        { error: 'Failed to save your message. Please try again later.' },
-        { status: 500 }
-      );
+      // Fallback to memory storage
+      submissionsStorage.push(submission);
+      console.log(`✅ Submission stored in memory fallback! ID: ${submission.id}`);
     }
 
     // Simulate processing time
@@ -134,7 +142,7 @@ export async function GET() {
   try {
     const redis = await getRedisClient();
     
-    if (redis) {
+    if (redis && redis.lrange) {
       // Production: Get from Redis
       try {
         const submissionIds = await redis.lrange('submissions:list', 0, -1);
@@ -158,10 +166,11 @@ export async function GET() {
         return NextResponse.json({ submissions: validSubmissions });
       } catch (error) {
         console.error('❌ Error fetching from Redis:', error);
-        return NextResponse.json(
-          { error: 'Failed to fetch submissions' },
-          { status: 500 }
+        // Fallback to memory
+        const sortedSubmissions = [...submissionsStorage].sort(
+          (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
         );
+        return NextResponse.json({ submissions: sortedSubmissions });
       }
     } else {
       // Development: Get from memory
