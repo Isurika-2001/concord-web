@@ -13,6 +13,11 @@ interface Submission {
 // Simple in-memory storage as fallback
 const submissionsStorage: Submission[] = [];
 
+// Helper function to add submission to storage
+const addSubmission = (submission: Submission) => {
+  submissionsStorage.push(submission);
+};
+
 // Dynamic import for Vercel KV (only available in production)
 const getKV = async () => {
   try {
@@ -73,17 +78,17 @@ export async function POST(request: NextRequest) {
         await kv.lpush('submissions:list', submission.id);
         
         console.log(`✅ Submission stored in KV! ID: ${submission.id}`);
-      } else {
-        // Fallback to in-memory storage
-        submissionsStorage.push(submission);
-        console.log(`✅ Submission stored in memory! ID: ${submission.id}`);
-      }
-    } catch (error) {
-      console.error('Failed to store submission in KV, using memory fallback:', error);
-      // Fallback to in-memory storage
-      submissionsStorage.push(submission);
-      console.log(`✅ Submission stored in memory fallback! ID: ${submission.id}`);
-    }
+             } else {
+         // Fallback to in-memory storage
+         addSubmission(submission);
+         console.log(`✅ Submission stored in memory! ID: ${submission.id}`);
+       }
+         } catch (error) {
+       console.error('Failed to store submission in KV, using memory fallback:', error);
+       // Fallback to in-memory storage
+       addSubmission(submission);
+       console.log(`✅ Submission stored in memory fallback! ID: ${submission.id}`);
+     }
 
     // Simulate processing time
     await new Promise(resolve => setTimeout(resolve, 500));
