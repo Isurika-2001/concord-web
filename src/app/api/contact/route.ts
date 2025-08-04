@@ -143,8 +143,8 @@ export async function GET() {
         
         // Filter out any null values and sort by timestamp
         const validSubmissions = submissions
-          .filter((submission: any): submission is Submission => submission !== null)
-          .sort((a: Submission, b: Submission) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+          .filter((submission): submission is Submission => submission !== null)
+          .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
         return NextResponse.json({ submissions: validSubmissions });
       } catch (error) {
