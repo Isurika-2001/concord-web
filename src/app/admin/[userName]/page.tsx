@@ -65,6 +65,14 @@ export default function AdminPage() {
     setLoading(false);
   }, [userName, ADMIN_PASSWORD]);
 
+  // Fetch submissions when authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      console.log('🔍 User authenticated, fetching submissions...');
+      fetchSubmissions();
+    }
+  }, [isAuthenticated]);
+
   const handleLogin = () => {
     if (isLocked) {
       setPasswordError("Access is locked. Please redeploy to reset.");
@@ -103,10 +111,14 @@ export default function AdminPage() {
 
   const fetchSubmissions = async () => {
     try {
+      console.log('🔍 Fetching submissions...');
       const response = await fetch('/api/contact');
       const data = await response.json();
+      console.log('🔍 Fetched data:', data);
       setSubmissions(data.submissions || []);
-    } catch {
+      console.log('🔍 Set submissions:', data.submissions || []);
+    } catch (error) {
+      console.error('❌ Error fetching submissions:', error);
       setError('Failed to load submissions');
     } finally {
       setLoading(false);
