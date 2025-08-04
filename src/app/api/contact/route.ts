@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from 'redis';
 
 // Define types for better type safety
 interface Submission {
@@ -18,17 +19,23 @@ const addSubmission = (submission: Submission) => {
   submissionsStorage.push(submission);
 };
 
-// Dynamic import for Vercel KV (only available in production)
-const getKV = async () => {
-  try {
-    if (process.env.NODE_ENV === 'production') {
-      const { kv } = await import('@vercel/kv');
-      return kv;
+// Redis client setup
+let redisClient: any = null;
+
+const getRedisClient = async () => {
+  if (!redisClient) {
+    try {
+      redisClient = createClient({
+        url: process.env.KV_URL || process.env.REDIS_URL
+      });
+      await redisClient.connect();
+      console.log('✅ Redis client connected');
+    } catch (error) {
+      console.error('❌ Redis connection failed:', error);
+      return null;
     }
-  } catch {
-    console.log('Vercel KV not available, using fallback storage');
   }
-  return null;
+  return redisClient;
 };
 
 export async function POST(request: NextRequest) {
@@ -66,29 +73,29 @@ export async function POST(request: NextRequest) {
     // Log to console
     console.log('Contact form submission:', submission);
 
-    // Try to store in Vercel KV first, fallback to in-memory storage
+    // Try to store in Redis first, fallback to in-memory storage
     try {
-      const kv = await getKV();
+      const redis = await getRedisClient();
       
-      if (kv) {
+      if (redis) {
         // Store the submission with a unique key
-        await kv.set(`submission:${submission.id}`, submission);
+        await redis.set(`submission:${submission.id}`, JSON.stringify(submission));
         
         // Add to a list of all submission IDs for easy retrieval
-        await kv.lpush('submissions:list', submission.id);
+        await redis.lpush('submissions:list', submission.id);
         
-        console.log(`✅ Submission stored in KV! ID: ${submission.id}`);
-             } else {
-         // Fallback to in-memory storage
-         addSubmission(submission);
-         console.log(`✅ Submission stored in memory! ID: ${submission.id}`);
-       }
-         } catch (error) {
-       console.error('Failed to store submission in KV, using memory fallback:', error);
-       // Fallback to in-memory storage
-       addSubmission(submission);
-       console.log(`✅ Submission stored in memory fallback! ID: ${submission.id}`);
-     }
+        console.log(`✅ Submission stored in Redis! ID: ${submission.id}`);
+      } else {
+        // Fallback to in-memory storage
+        addSubmission(submission);
+        console.log(`✅ Submission stored in memory! ID: ${submission.id}`);
+      }
+    } catch (error) {
+      console.error('Failed to store submission in Redis, using memory fallback:', error);
+      // Fallback to in-memory storage
+      addSubmission(submission);
+      console.log(`✅ Submission stored in memory fallback! ID: ${submission.id}`);
+    }
 
     // Simulate processing time
     await new Promise(resolve => setTimeout(resolve, 500));
@@ -113,20 +120,25 @@ export async function POST(request: NextRequest) {
 // New endpoint to get all submissions (for admin use)
 export async function GET() {
   try {
-    const kv = await getKV();
+    const redis = await getRedisClient();
     
-    if (kv) {
-      // Try to get from Vercel KV
+    if (redis) {
+      // Try to get from Redis
       try {
         // Get all submission IDs
-        const submissionIds = await kv.lrange('submissions:list', 0, -1);
+        const submissionIds = await redis.lrange('submissions:list', 0, -1);
         
         if (!submissionIds || submissionIds.length === 0) {
           return NextResponse.json({ submissions: [] });
         }
 
         // Get all submissions
-        const submissions = await kv.mget(submissionIds.map((id: string) => `submission:${id}`));
+        const submissions = await Promise.all(
+          submissionIds.map(async (id: string) => {
+            const data = await redis.get(`submission:${id}`);
+            return data ? JSON.parse(data) : null;
+          })
+        );
         
         // Filter out any null values and sort by timestamp
         const validSubmissions = submissions
@@ -135,7 +147,7 @@ export async function GET() {
 
         return NextResponse.json({ submissions: validSubmissions });
       } catch (error) {
-        console.error('Error fetching from KV, using memory fallback:', error);
+        console.error('Error fetching from Redis, using memory fallback:', error);
         // Fallback to in-memory storage
         const sortedSubmissions = [...submissionsStorage].sort(
           (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
