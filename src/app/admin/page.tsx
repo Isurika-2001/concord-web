@@ -32,7 +32,7 @@ export default function AdminPage() {
       } else {
         setError(data.error || 'Failed to fetch submissions');
       }
-    } catch (err) {
+    } catch {
       setError('Failed to fetch submissions');
     } finally {
       setLoading(false);
