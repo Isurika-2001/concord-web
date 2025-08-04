@@ -4,7 +4,10 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import { useParams } from "next/navigation";
+import { Mail, RefreshCw, LogOut, User, Calendar, MessageSquare } from "lucide-react";
 
 interface Submission {
   id: string;
@@ -18,20 +21,19 @@ interface Submission {
 // Loading skeleton component
 const SubmissionSkeleton = () => (
   <Card className="animate-pulse">
-    <CardHeader>
+    <CardHeader className="pb-3">
       <div className="flex justify-between items-start">
         <div className="space-y-2">
-          <div className="h-5 bg-gray-200 rounded w-32"></div>
-          <div className="h-4 bg-gray-200 rounded w-48"></div>
+          <div className="h-4 bg-gray-200 rounded w-24"></div>
+          <div className="h-3 bg-gray-200 rounded w-32"></div>
         </div>
-        <div className="h-3 bg-gray-200 rounded w-24"></div>
+        <div className="h-3 bg-gray-200 rounded w-20"></div>
       </div>
     </CardHeader>
-    <CardContent>
+    <CardContent className="pt-0">
       <div className="space-y-2">
-        <div className="h-4 bg-gray-200 rounded w-full"></div>
-        <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-        <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+        <div className="h-3 bg-gray-200 rounded w-full"></div>
+        <div className="h-3 bg-gray-200 rounded w-2/3"></div>
       </div>
     </CardContent>
   </Card>
@@ -147,6 +149,12 @@ export default function AdminPage() {
     }
   };
 
+  const handleEmailClick = (email: string, firstName: string, lastName: string) => {
+    const subject = encodeURIComponent(`Re: Your message to Concord Tech Solutions`);
+    const body = encodeURIComponent(`Dear ${firstName} ${lastName},\n\nThank you for contacting Concord Tech Solutions.\n\nWe have received your message and will get back to you soon.\n\nBest regards,\nConcord Tech Solutions Team`);
+    window.open(`mailto:${email}?subject=${subject}&body=${body}`, '_blank');
+  };
+
   // Check if username is valid
   if (!ADMIN_PASSWORD) {
     return (
@@ -157,7 +165,7 @@ export default function AdminPage() {
           </CardHeader>
           <CardContent>
             <p className="text-center text-muted-foreground">
-              Only &quot;isurika&quot; and &quot;tharindu&quot; are valid usernames.
+              Only "isurika" and "tharindu" are valid usernames.
             </p>
           </CardContent>
         </Card>
@@ -237,13 +245,14 @@ export default function AdminPage() {
                 onClick={handleLogout}
                 className="text-sm"
               >
+                <LogOut className="h-4 w-4 mr-2" />
                 Logout
               </Button>
             </div>
           </div>
           
-          <div className="space-y-6">
-            {[1, 2, 3].map((index) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[1, 2, 3, 4, 5, 6].map((index) => (
               <SubmissionSkeleton key={index} />
             ))}
           </div>
@@ -265,21 +274,22 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-background p-8">
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold">Contact Form Submissions</h1>
             <p className="text-sm text-muted-foreground">Logged in as: {userName}</p>
           </div>
           <div className="flex items-center space-x-4">
-            <div className="text-sm text-muted-foreground">
-              Total: {submissions.length} submissions
-            </div>
+            <Badge variant="secondary" className="text-sm">
+              {submissions.length} submissions
+            </Badge>
             <Button 
               variant="outline" 
               onClick={fetchSubmissions}
               className="text-sm"
             >
+              <RefreshCw className="h-4 w-4 mr-2" />
               Refresh
             </Button>
             <Button 
@@ -287,6 +297,7 @@ export default function AdminPage() {
               onClick={handleLogout}
               className="text-sm"
             >
+              <LogOut className="h-4 w-4 mr-2" />
               Logout
             </Button>
           </div>
@@ -295,30 +306,51 @@ export default function AdminPage() {
         {submissions.length === 0 ? (
           <Card>
             <CardContent className="p-8 text-center">
+              <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <p className="text-muted-foreground">No submissions yet.</p>
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {submissions.map((submission) => (
-              <Card key={submission.id}>
-                <CardHeader>
+              <Card key={submission.id} className="hover:shadow-md transition-shadow">
+                <CardHeader className="pb-3">
                   <div className="flex justify-between items-start">
-                    <div>
-                      <CardTitle className="text-lg">
+                    <div className="space-y-1">
+                      <CardTitle className="text-base flex items-center">
+                        <User className="h-4 w-4 mr-2 text-muted-foreground" />
                         {submission.firstName} {submission.lastName}
                       </CardTitle>
-                      <p className="text-sm text-muted-foreground">
-                        {submission.email}
-                      </p>
+                      <div className="flex items-center text-sm text-muted-foreground">
+                        <Calendar className="h-3 w-3 mr-1" />
+                        {new Date(submission.timestamp).toLocaleDateString()}
+                      </div>
                     </div>
-                    <div className="text-xs text-muted-foreground">
-                      {new Date(submission.timestamp).toLocaleString()}
-                    </div>
+                    <Badge variant="outline" className="text-xs">
+                      {new Date(submission.timestamp).toLocaleTimeString()}
+                    </Badge>
                   </div>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-sm whitespace-pre-wrap">{submission.message}</p>
+                <CardContent className="pt-0">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Email:</span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEmailClick(submission.email, submission.firstName, submission.lastName)}
+                        className="text-xs h-auto p-1 hover:bg-blue-50"
+                      >
+                        <Mail className="h-3 w-3 mr-1" />
+                        {submission.email}
+                      </Button>
+                    </div>
+                    <Separator />
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-2">Message:</p>
+                      <p className="text-sm whitespace-pre-wrap line-clamp-3">{submission.message}</p>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             ))}
