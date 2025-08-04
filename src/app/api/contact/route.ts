@@ -37,16 +37,8 @@ const getRedisClient = async () => {
       redisClient = createClient({
         url: process.env.REDIS_URL
       });
-      
-      // Test the connection
       await redisClient.connect();
-      
-      // Test basic operations
-      await redisClient.set('test', 'test');
-      await redisClient.get('test');
-      await redisClient.del('test');
-      
-      console.log('✅ Redis client connected and tested');
+      console.log('✅ Redis client connected');
     } catch (error) {
       console.error('❌ Redis connection failed:', error);
       console.error('❌ Error details:', {
@@ -54,7 +46,6 @@ const getRedisClient = async () => {
         code: error instanceof Error && 'code' in error ? (error as { code?: string }).code : undefined,
         stack: error instanceof Error ? error.stack : undefined
       });
-      redisClient = null;
       return null;
     }
   }
@@ -100,18 +91,31 @@ export async function POST(request: NextRequest) {
     try {
       const redis = await getRedisClient();
       
+      console.log('🔍 Redis client status:', redis ? 'Connected' : 'Not available');
+      console.log('🔍 Redis methods available:', redis ? Object.keys(redis).filter(key => typeof redis[key] === 'function') : 'No client');
+      
       if (redis && redis.lpush) {
         // Production: Store in Redis
+        console.log('🔍 Attempting to store in Redis...');
         await redis.set(`submission:${submission.id}`, JSON.stringify(submission));
+        console.log('✅ Set operation completed');
+        
         await redis.lpush('submissions:list', submission.id);
+        console.log('✅ LPush operation completed');
+        
         console.log(`✅ Submission stored in Redis! ID: ${submission.id}`);
       } else {
         // Development or Redis failed: Store in memory
+        console.log('🔍 Storing in memory (development or Redis unavailable)');
         submissionsStorage.push(submission);
         console.log(`✅ Submission stored in memory! ID: ${submission.id}`);
       }
     } catch (error) {
       console.error('❌ Failed to store submission:', error);
+      console.error('❌ Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      });
       // Fallback to memory storage
       submissionsStorage.push(submission);
       console.log(`✅ Submission stored in memory fallback! ID: ${submission.id}`);
