@@ -34,7 +34,7 @@ const getRedisClient = async () => {
       console.error('❌ Redis connection failed:', error);
       console.error('❌ Error details:', {
         message: error instanceof Error ? error.message : 'Unknown error',
-        code: (error as any)?.code,
+        code: error instanceof Error && 'code' in error ? (error as { code?: string }).code : undefined,
         stack: error instanceof Error ? error.stack : undefined
       });
       return null;
