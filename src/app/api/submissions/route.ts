@@ -14,7 +14,7 @@ export async function GET() {
       submissions,
       count: submissions.length
     });
-  } catch (error) {
+  } catch {
     // If file doesn't exist or can't be read, return empty array
     return NextResponse.json({
       submissions: [],

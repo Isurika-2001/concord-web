@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
       try {
         const existingData = await readFile(SUBMISSIONS_FILE, 'utf-8');
         submissions = JSON.parse(existingData);
-      } catch (error) {
+      } catch {
         // File doesn't exist, start with empty array
         submissions = [];
       }
@@ -63,8 +63,8 @@ export async function POST(request: NextRequest) {
       await writeFile(SUBMISSIONS_FILE, JSON.stringify(submissions, null, 2));
       
       console.log(`✅ Submission stored! Total submissions: ${submissions.length}`);
-    } catch (fileError) {
-      console.error('Failed to store submission:', fileError);
+    } catch {
+      console.error('Failed to store submission');
       // Continue anyway - at least we logged it
     }
 
@@ -79,8 +79,8 @@ export async function POST(request: NextRequest) {
       { status: 200 }
     );
 
-  } catch (error) {
-    console.error('Contact form error:', error);
+  } catch {
+    console.error('Contact form error');
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

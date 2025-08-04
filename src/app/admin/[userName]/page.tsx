@@ -106,7 +106,7 @@ export default function AdminPage() {
       const response = await fetch('/api/submissions');
       const data = await response.json();
       setSubmissions(data.submissions || []);
-    } catch (err) {
+    } catch {
       setError('Failed to load submissions');
     } finally {
       setLoading(false);
@@ -123,7 +123,7 @@ export default function AdminPage() {
           </CardHeader>
           <CardContent>
             <p className="text-center text-muted-foreground">
-              Only "isurika" and "tharindu" are valid usernames.
+              Only &quot;isurika&quot; and &quot;tharindu&quot; are valid usernames.
             </p>
           </CardContent>
         </Card>

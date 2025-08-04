@@ -4,14 +4,11 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { NavigationMenu, NavigationMenuContent, NavigationMenuItem, NavigationMenuLink, NavigationMenuList, NavigationMenuTrigger } from "@/components/ui/navigation-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { 
   Menu, 
-  X, 
   Code, 
   Web, 
-  Smartphone, 
   Cloud, 
   School, 
   Group, 
@@ -410,7 +407,7 @@ export default function Home() {
               Get In Touch
             </h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Ready to start your next project? Let's discuss how we can help bring your vision to life.
+              Ready to start your next project? Let&apos;s discuss how we can help bring your vision to life.
             </p>
           </div>
           
