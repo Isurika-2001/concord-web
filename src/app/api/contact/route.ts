@@ -17,6 +17,14 @@ let redisClient: ReturnType<typeof createClient> | null = null;
 const getRedisClient = async () => {
   if (!redisClient) {
     try {
+      console.log('🔍 Attempting Redis connection...');
+      console.log('🔍 REDIS_URL:', process.env.REDIS_URL ? 'Set' : 'Not set');
+      
+      if (!process.env.REDIS_URL) {
+        console.error('❌ REDIS_URL environment variable is not set');
+        return null;
+      }
+      
       redisClient = createClient({
         url: process.env.REDIS_URL
       });
@@ -24,6 +32,11 @@ const getRedisClient = async () => {
       console.log('✅ Redis client connected');
     } catch (error) {
       console.error('❌ Redis connection failed:', error);
+      console.error('❌ Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        code: (error as any)?.code,
+        stack: error instanceof Error ? error.stack : undefined
+      });
       return null;
     }
   }
