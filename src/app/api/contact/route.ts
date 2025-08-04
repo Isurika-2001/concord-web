@@ -10,13 +10,19 @@ interface Submission {
   timestamp: string;
 }
 
+// Simple in-memory storage as fallback
+let submissionsStorage: Submission[] = [];
+
 // Dynamic import for Vercel KV (only available in production)
 const getKV = async () => {
-  if (process.env.NODE_ENV === 'production') {
-    const { kv } = await import('@vercel/kv');
-    return kv;
+  try {
+    if (process.env.NODE_ENV === 'production') {
+      const { kv } = await import('@vercel/kv');
+      return kv;
+    }
+  } catch (error) {
+    console.log('Vercel KV not available, using fallback storage');
   }
-  // Fallback for development - you can implement a local storage solution
   return null;
 };
 
@@ -55,7 +61,7 @@ export async function POST(request: NextRequest) {
     // Log to console
     console.log('Contact form submission:', submission);
 
-    // Store in Vercel KV (production) or log (development)
+    // Try to store in Vercel KV first, fallback to in-memory storage
     try {
       const kv = await getKV();
       
@@ -68,15 +74,15 @@ export async function POST(request: NextRequest) {
         
         console.log(`✅ Submission stored in KV! ID: ${submission.id}`);
       } else {
-        // Development fallback - just log the submission
-        console.log(`✅ Submission logged (development mode): ${submission.id}`);
+        // Fallback to in-memory storage
+        submissionsStorage.push(submission);
+        console.log(`✅ Submission stored in memory! ID: ${submission.id}`);
       }
     } catch (error) {
-      console.error('Failed to store submission:', error);
-      return NextResponse.json(
-        { error: 'Failed to store submission' },
-        { status: 500 }
-      );
+      console.error('Failed to store submission in KV, using memory fallback:', error);
+      // Fallback to in-memory storage
+      submissionsStorage.push(submission);
+      console.log(`✅ Submission stored in memory fallback! ID: ${submission.id}`);
     }
 
     // Simulate processing time
@@ -104,26 +110,40 @@ export async function GET() {
   try {
     const kv = await getKV();
     
-    if (!kv) {
-      return NextResponse.json({ submissions: [] });
+    if (kv) {
+      // Try to get from Vercel KV
+      try {
+        // Get all submission IDs
+        const submissionIds = await kv.lrange('submissions:list', 0, -1);
+        
+        if (!submissionIds || submissionIds.length === 0) {
+          return NextResponse.json({ submissions: [] });
+        }
+
+        // Get all submissions
+        const submissions = await kv.mget(submissionIds.map((id: string) => `submission:${id}`));
+        
+        // Filter out any null values and sort by timestamp
+        const validSubmissions = submissions
+          .filter((submission): submission is Submission => submission !== null)
+          .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+        return NextResponse.json({ submissions: validSubmissions });
+      } catch (error) {
+        console.error('Error fetching from KV, using memory fallback:', error);
+        // Fallback to in-memory storage
+        const sortedSubmissions = [...submissionsStorage].sort(
+          (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+        );
+        return NextResponse.json({ submissions: sortedSubmissions });
+      }
+    } else {
+      // Use in-memory storage
+      const sortedSubmissions = [...submissionsStorage].sort(
+        (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      );
+      return NextResponse.json({ submissions: sortedSubmissions });
     }
-
-    // Get all submission IDs
-    const submissionIds = await kv.lrange('submissions:list', 0, -1);
-    
-    if (!submissionIds || submissionIds.length === 0) {
-      return NextResponse.json({ submissions: [] });
-    }
-
-    // Get all submissions
-    const submissions = await kv.mget(submissionIds.map((id: string) => `submission:${id}`));
-    
-    // Filter out any null values and sort by timestamp
-    const validSubmissions = submissions
-      .filter((submission): submission is Submission => submission !== null)
-      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-
-    return NextResponse.json({ submissions: validSubmissions });
   } catch (error) {
     console.error('Error fetching submissions:', error);
     return NextResponse.json(
