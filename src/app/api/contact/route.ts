@@ -113,14 +113,14 @@ export async function POST(request: NextRequest) {
       if (redis) {
         // Check if Redis client has the required methods
         const hasSet = typeof redis.set === 'function';
-        const hasLpush = typeof redis.lpush === 'function';
-        const hasLrange = typeof redis.lrange === 'function';
+        const hasLpush = typeof redis.lPush === 'function'; // Note: lPush not lpush
+        const hasLrange = typeof redis.lRange === 'function'; // Note: lRange not lrange
         const hasGet = typeof redis.get === 'function';
         
         console.log('🔍 Redis method availability:', {
           set: hasSet,
-          lpush: hasLpush,
-          lrange: hasLrange,
+          lPush: hasLpush,
+          lRange: hasLrange,
           get: hasGet
         });
         
@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
           await redis.set(`submission:${submission.id}`, JSON.stringify(submission));
           console.log('✅ Set operation completed');
 
-          await redis.lpush('submissions:list', submission.id);
+          await redis.lPush('submissions:list', submission.id);
           console.log('✅ LPush operation completed');
 
           console.log(`✅ Submission stored in Redis! ID: ${submission.id}`);
@@ -182,20 +182,20 @@ export async function GET() {
   try {
     const redis = await getRedisClient();
     
-                if (redis) {
-              // Check if Redis client has the required methods
-              const hasLrange = typeof redis.lrange === 'function';
-              const hasGet = typeof redis.get === 'function';
-              
-              console.log('🔍 Redis method availability for GET:', {
-                lrange: hasLrange,
-                get: hasGet
-              });
-              
-              if (hasLrange && hasGet) {
-                // Production: Get from Redis
-                try {
-                  const submissionIds = await redis.lrange('submissions:list', 0, -1);
+                              if (redis) {
+                // Check if Redis client has the required methods
+                const hasLrange = typeof redis.lRange === 'function'; // Note: lRange not lrange
+                const hasGet = typeof redis.get === 'function';
+                
+                console.log('🔍 Redis method availability for GET:', {
+                  lRange: hasLrange,
+                  get: hasGet
+                });
+                
+                if (hasLrange && hasGet) {
+                  // Production: Get from Redis
+                  try {
+                    const submissionIds = await redis.lRange('submissions:list', 0, -1);
 
                   if (!submissionIds || (Array.isArray(submissionIds) && submissionIds.length === 0)) {
                     return NextResponse.json({ submissions: [] });
