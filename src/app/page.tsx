@@ -248,7 +248,7 @@ export default function Home() {
         />
         <div className="relative z-10 max-w-7xl mx-auto">
           <div className="text-center">
-            <h1 className="text-4xl sm:text-6xl font-bold text-foreground mb-6">
+            <h1 className="text-4xl sm:text-6xl font-bold text-foreground mt-10 mb-6">
               Innovative
               <span className="text-primary block">Tech Solutions</span>
             </h1>
