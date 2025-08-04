@@ -165,7 +165,7 @@ export default function AdminPage() {
           </CardHeader>
           <CardContent>
             <p className="text-center text-muted-foreground">
-              Only "isurika" and "tharindu" are valid usernames.
+              Only &quot;isurika&quot; and &quot;tharindu&quot; are valid usernames.
             </p>
           </CardContent>
         </Card>
