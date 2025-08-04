@@ -103,7 +103,7 @@ export default function AdminPage() {
 
   const fetchSubmissions = async () => {
     try {
-      const response = await fetch('/api/submissions');
+      const response = await fetch('/api/contact');
       const data = await response.json();
       setSubmissions(data.submissions || []);
     } catch {
