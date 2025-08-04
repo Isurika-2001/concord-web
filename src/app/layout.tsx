@@ -15,6 +15,20 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Concord Tech Solutions - Innovative Web Development & Academy",
   description: "Concord Tech Solutions provides interactive, cost-effective web-based solutions using React, Next.js, and modern technologies. We also offer Concord Academy for developer training.",
+  icons: {
+    icon: [
+      {
+        url: "/concord-logo-icon.png",
+        type: "image/png",
+      },
+      {
+        url: "/favicon.ico",
+        type: "image/x-icon",
+      },
+    ],
+    shortcut: "/concord-logo-icon.png",
+    apple: "/concord-logo-icon.png",
+  },
 };
 
 export default function RootLayout({

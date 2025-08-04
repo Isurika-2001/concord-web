@@ -24,6 +24,8 @@ import {
 export default function Home() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isLogoVisible, setIsLogoVisible] = useState(false);
+  const [isAcademyLogoVisible, setIsAcademyLogoVisible] = useState(false);
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -40,6 +42,36 @@ export default function Home() {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  useEffect(() => {
+    // Trigger logo animation after a short delay
+    const timer = setTimeout(() => {
+      setIsLogoVisible(true);
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    // Trigger academy logo animation when academy section comes into view
+    const handleAcademyLogoAnimation = () => {
+      const academySection = document.getElementById('academy');
+      if (academySection) {
+        const rect = academySection.getBoundingClientRect();
+        const isVisible = rect.top < window.innerHeight * 0.8;
+        
+        if (isVisible && !isAcademyLogoVisible) {
+          setIsAcademyLogoVisible(true);
+        }
+      }
+    };
+
+    window.addEventListener('scroll', handleAcademyLogoAnimation);
+    // Also check on initial load
+    handleAcademyLogoAnimation();
+    
+    return () => window.removeEventListener('scroll', handleAcademyLogoAnimation);
+  }, [isAcademyLogoVisible]);
 
   const scrollToSection = (sectionId: string) => {
     const element = document.getElementById(sectionId);
@@ -226,7 +258,11 @@ export default function Home() {
                 alt="Concord Tech Solutions"
                 width={500}
                 height={150}
-                className="h-60 w-auto"
+                className={`h-60 w-auto transition-all duration-1000 ease-out transform ${
+                  isLogoVisible 
+                    ? 'opacity-100 translate-y-0 scale-100' 
+                    : 'opacity-0 translate-y-8 scale-95'
+                }`}
                 priority
               />
             </div>
@@ -344,7 +380,11 @@ export default function Home() {
                 alt="Concord Academy"
                 width={350}
                 height={120}
-                className="h-60 w-auto"
+                className={`h-60 w-auto transition-all duration-1000 ease-out transform ${
+                  isAcademyLogoVisible 
+                    ? 'opacity-100 translate-y-0 scale-100' 
+                    : 'opacity-0 translate-y-8 scale-95'
+                }`}
                 priority
               />
             </div>
