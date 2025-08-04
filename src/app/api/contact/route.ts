@@ -11,14 +11,6 @@ interface Submission {
   timestamp: string;
 }
 
-// Simple in-memory storage as fallback
-const submissionsStorage: Submission[] = [];
-
-// Helper function to add submission to storage
-const addSubmission = (submission: Submission) => {
-  submissionsStorage.push(submission);
-};
-
 // Redis client setup
 let redisClient: ReturnType<typeof createClient> | null = null;
 
@@ -73,28 +65,31 @@ export async function POST(request: NextRequest) {
     // Log to console
     console.log('Contact form submission:', submission);
 
-    // Try to store in Redis first, fallback to in-memory storage
+    // Try to store in Redis - if it fails, return error
     try {
       const redis = await getRedisClient();
       
-      if (redis) {
-        // Store the submission with a unique key
-        await redis.set(`submission:${submission.id}`, JSON.stringify(submission));
-        
-        // Add to a list of all submission IDs for easy retrieval
-        await redis.lpush('submissions:list', submission.id);
-        
-        console.log(`✅ Submission stored in Redis! ID: ${submission.id}`);
-      } else {
-        // Fallback to in-memory storage
-        addSubmission(submission);
-        console.log(`✅ Submission stored in memory! ID: ${submission.id}`);
+      if (!redis) {
+        console.error('❌ Redis not available - submission failed');
+        return NextResponse.json(
+          { error: 'Database connection failed. Please try again later.' },
+          { status: 500 }
+        );
       }
+
+      // Store the submission with a unique key
+      await redis.set(`submission:${submission.id}`, JSON.stringify(submission));
+      
+      // Add to a list of all submission IDs for easy retrieval
+      await redis.lpush('submissions:list', submission.id);
+      
+      console.log(`✅ Submission stored in Redis! ID: ${submission.id}`);
     } catch (error) {
-      console.error('Failed to store submission in Redis, using memory fallback:', error);
-      // Fallback to in-memory storage
-      addSubmission(submission);
-      console.log(`✅ Submission stored in memory fallback! ID: ${submission.id}`);
+      console.error('❌ Failed to store submission in Redis:', error);
+      return NextResponse.json(
+        { error: 'Failed to save your message. Please try again later.' },
+        { status: 500 }
+      );
     }
 
     // Simulate processing time
@@ -122,45 +117,44 @@ export async function GET() {
   try {
     const redis = await getRedisClient();
     
-    if (redis) {
-      // Try to get from Redis
-      try {
-        // Get all submission IDs
-        const submissionIds = await redis.lrange('submissions:list', 0, -1);
-        
-        if (!submissionIds || (Array.isArray(submissionIds) && submissionIds.length === 0)) {
-          return NextResponse.json({ submissions: [] });
-        }
-
-        // Get all submissions
-        const submissionIdsArray = Array.isArray(submissionIds) ? submissionIds as string[] : [];
-        const submissions = await Promise.all(
-          submissionIdsArray.map(async (id: string) => {
-            const data = await redis.get(`submission:${id}`);
-            return data ? JSON.parse(data) : null;
-          })
-        );
-        
-        // Filter out any null values and sort by timestamp
-        const validSubmissions = submissions
-          .filter((submission): submission is Submission => submission !== null)
-          .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-
-        return NextResponse.json({ submissions: validSubmissions });
-      } catch (error) {
-        console.error('Error fetching from Redis, using memory fallback:', error);
-        // Fallback to in-memory storage
-        const sortedSubmissions = [...submissionsStorage].sort(
-          (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-        );
-        return NextResponse.json({ submissions: sortedSubmissions });
-      }
-    } else {
-      // Use in-memory storage
-      const sortedSubmissions = [...submissionsStorage].sort(
-        (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    if (!redis) {
+      console.error('❌ Redis not available - cannot fetch submissions');
+      return NextResponse.json(
+        { error: 'Database connection failed' },
+        { status: 500 }
       );
-      return NextResponse.json({ submissions: sortedSubmissions });
+    }
+
+    // Try to get from Redis
+    try {
+      // Get all submission IDs
+      const submissionIds = await redis.lrange('submissions:list', 0, -1);
+      
+      if (!submissionIds || (Array.isArray(submissionIds) && submissionIds.length === 0)) {
+        return NextResponse.json({ submissions: [] });
+      }
+
+      // Get all submissions
+      const submissionIdsArray = Array.isArray(submissionIds) ? submissionIds as string[] : [];
+      const submissions = await Promise.all(
+        submissionIdsArray.map(async (id: string) => {
+          const data = await redis.get(`submission:${id}`);
+          return data ? JSON.parse(data) : null;
+        })
+      );
+      
+      // Filter out any null values and sort by timestamp
+      const validSubmissions = submissions
+        .filter((submission): submission is Submission => submission !== null)
+        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+      return NextResponse.json({ submissions: validSubmissions });
+    } catch (error) {
+      console.error('❌ Error fetching from Redis:', error);
+      return NextResponse.json(
+        { error: 'Failed to fetch submissions' },
+        { status: 500 }
+      );
     }
   } catch (error) {
     console.error('Error fetching submissions:', error);
