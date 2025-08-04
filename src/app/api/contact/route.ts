@@ -107,20 +107,39 @@ export async function POST(request: NextRequest) {
     // Try to store in Redis (production) or memory (development)
     try {
       const redis = await getRedisClient();
-      
+
       console.log('🔍 Redis client status:', redis ? 'Connected' : 'Not available');
-      console.log('🔍 Redis methods available:', redis ? Object.keys(redis).filter(key => typeof redis[key] === 'function') : 'No client');
       
-      if (redis && redis.lpush) {
-        // Production: Store in Redis
-        console.log('🔍 Attempting to store in Redis...');
-        await redis.set(`submission:${submission.id}`, JSON.stringify(submission));
-        console.log('✅ Set operation completed');
+      if (redis) {
+        // Check if Redis client has the required methods
+        const hasSet = typeof redis.set === 'function';
+        const hasLpush = typeof redis.lpush === 'function';
+        const hasLrange = typeof redis.lrange === 'function';
+        const hasGet = typeof redis.get === 'function';
         
-        await redis.lpush('submissions:list', submission.id);
-        console.log('✅ LPush operation completed');
+        console.log('🔍 Redis method availability:', {
+          set: hasSet,
+          lpush: hasLpush,
+          lrange: hasLrange,
+          get: hasGet
+        });
         
-        console.log(`✅ Submission stored in Redis! ID: ${submission.id}`);
+        if (hasSet && hasLpush && hasLrange && hasGet) {
+          // Production: Store in Redis
+          console.log('🔍 Attempting to store in Redis...');
+          await redis.set(`submission:${submission.id}`, JSON.stringify(submission));
+          console.log('✅ Set operation completed');
+
+          await redis.lpush('submissions:list', submission.id);
+          console.log('✅ LPush operation completed');
+
+          console.log(`✅ Submission stored in Redis! ID: ${submission.id}`);
+        } else {
+          // Redis methods not available: Store in memory
+          console.log('🔍 Redis methods not available, storing in memory');
+          submissionsStorage.push(submission);
+          console.log(`✅ Submission stored in memory! ID: ${submission.id}`);
+        }
       } else {
         // Development or Redis failed: Store in memory
         console.log('🔍 Storing in memory (development or Redis unavailable)');
@@ -163,43 +182,61 @@ export async function GET() {
   try {
     const redis = await getRedisClient();
     
-    if (redis && redis.lrange) {
-      // Production: Get from Redis
-      try {
-        const submissionIds = await redis.lrange('submissions:list', 0, -1);
-        
-        if (!submissionIds || (Array.isArray(submissionIds) && submissionIds.length === 0)) {
-          return NextResponse.json({ submissions: [] });
-        }
+                if (redis) {
+              // Check if Redis client has the required methods
+              const hasLrange = typeof redis.lrange === 'function';
+              const hasGet = typeof redis.get === 'function';
+              
+              console.log('🔍 Redis method availability for GET:', {
+                lrange: hasLrange,
+                get: hasGet
+              });
+              
+              if (hasLrange && hasGet) {
+                // Production: Get from Redis
+                try {
+                  const submissionIds = await redis.lrange('submissions:list', 0, -1);
 
-        const submissionIdsArray = Array.isArray(submissionIds) ? submissionIds as string[] : [];
-        const submissions = await Promise.all(
-          submissionIdsArray.map(async (id: string) => {
-            const data = await redis.get(`submission:${id}`);
-            return data ? JSON.parse(data) : null;
-          })
-        );
-        
-        const validSubmissions = submissions
-          .filter((submission): submission is Submission => submission !== null)
-          .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+                  if (!submissionIds || (Array.isArray(submissionIds) && submissionIds.length === 0)) {
+                    return NextResponse.json({ submissions: [] });
+                  }
 
-        return NextResponse.json({ submissions: validSubmissions });
-      } catch (error) {
-        console.error('❌ Error fetching from Redis:', error);
-        // Fallback to memory
-        const sortedSubmissions = [...submissionsStorage].sort(
-          (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-        );
-        return NextResponse.json({ submissions: sortedSubmissions });
-      }
-    } else {
-      // Development: Get from memory
-      const sortedSubmissions = [...submissionsStorage].sort(
-        (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-      );
-      return NextResponse.json({ submissions: sortedSubmissions });
-    }
+                  const submissionIdsArray = Array.isArray(submissionIds) ? submissionIds as string[] : [];
+                  const submissions = await Promise.all(
+                    submissionIdsArray.map(async (id: string) => {
+                      const data = await redis.get(`submission:${id}`);
+                      return data ? JSON.parse(data) : null;
+                    })
+                  );
+
+                  const validSubmissions = submissions
+                    .filter((submission): submission is Submission => submission !== null)
+                    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+                  return NextResponse.json({ submissions: validSubmissions });
+                } catch (error) {
+                  console.error('❌ Error fetching from Redis:', error);
+                  // Fallback to memory
+                  const sortedSubmissions = [...submissionsStorage].sort(
+                    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+                  );
+                  return NextResponse.json({ submissions: sortedSubmissions });
+                }
+              } else {
+                // Redis methods not available: Get from memory
+                console.log('🔍 Redis methods not available, getting from memory');
+                const sortedSubmissions = [...submissionsStorage].sort(
+                  (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+                );
+                return NextResponse.json({ submissions: sortedSubmissions });
+              }
+            } else {
+              // Development: Get from memory
+              const sortedSubmissions = [...submissionsStorage].sort(
+                (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+              );
+              return NextResponse.json({ submissions: sortedSubmissions });
+            }
   } catch (error) {
     console.error('Error fetching submissions:', error);
     return NextResponse.json(
